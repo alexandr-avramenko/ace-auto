@@ -9,22 +9,13 @@ import java.util.Properties;
 @Slf4j
 public class PropertyUtil {
     private static final Properties PROPERTIES = new Properties();
-    private static final String SOURCE_FILE = "application.properties";
+    private static final String DEFAULT_SOURCE_FILE = "application.properties";
+    private static final String DEV_SOURCE_FILE = "dev.properties";
+    private static final String PRE_STAGE_SOURCE_FILE = "pre_stage.properties";
+    private static final String STAGE_SOURCE_FILE = "stage.properties";
 
     static {
         loadProperties();
-    }
-
-    private static void loadProperties() {
-        try (InputStream inputStream = PropertyUtil.class.getClassLoader().getResourceAsStream(SOURCE_FILE)) {
-            if (inputStream == null) {
-                throw new RuntimeException("File application.properties wasn't found " + SOURCE_FILE);
-            }
-            PROPERTIES.load(inputStream);
-            log.info("Properties load successfully");
-        } catch (IOException ex) {
-            log.error("An error occurs during reading properties, {}", ex.getMessage());
-        }
     }
 
     public static String get(String key) {
@@ -37,5 +28,29 @@ public class PropertyUtil {
             throw new IllegalArgumentException(String.format("Key wasn't found -> key: %s", key));
         }
         return value;
+    }
+
+    private static String resolveEnvironment() {
+        String env = System.getProperty("env");
+        return switch (env) {
+            case "dev" -> DEV_SOURCE_FILE;
+            case "pre_stage" -> PRE_STAGE_SOURCE_FILE;
+            case "stage" -> STAGE_SOURCE_FILE;
+            default -> DEFAULT_SOURCE_FILE;
+        };
+    }
+
+    private static void loadProperties() {
+        String sourceFile = resolveEnvironment();
+
+        try (InputStream inputStream = PropertyUtil.class.getClassLoader().getResourceAsStream(sourceFile)) {
+            if (inputStream == null) {
+                throw new RuntimeException("File application.properties wasn't found " + sourceFile);
+            }
+            PROPERTIES.load(inputStream);
+            log.info("Properties load successfully");
+        } catch (IOException ex) {
+            log.error("An error occurs during reading properties, {}", ex.getMessage());
+        }
     }
 }
